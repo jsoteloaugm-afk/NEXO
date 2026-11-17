@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal CTI Abierto - AUGM (Asociación de Universidades Grupo Montevideo)</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    /* Custom scrollbar for modern feel */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--card); }
+    ::-webkit-scrollbar-thumb { background: var(--card-border); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
+  </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased min-h-screen p-4 md:p-8 font-sans">
+
+  <!-- Top Navigation & Branding -->
+  <header class="max-w-7xl mx-auto mb-8">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-[var(--border)]">
+      <div>
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xl shadow-md">
+            U
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="text-xl md:text-2xl font-bold tracking-tight">Portal CTI Abierto</h1>
+              <span class="px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300">
+                Red AUGM
+              </span>
+            </div>
+            <p class="text-xs md:text-sm text-[var(--muted-foreground)]">
+              Observatorio de Fondos Concursables, I+D+i y Capacidades para Universidades de Argentina, Bolivia, Brasil, Chile, Paraguay y Uruguay
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="flex items-center gap-2 self-start md:self-auto">
+        <button onclick="exportData('json')" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--card-border)] transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          Exportar JSON
+        </button>
+        <button onclick="exportData('csv')" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--card-border)] transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          Exportar CSV
+        </button>
+        <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-400">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          Datos Abiertos API v1
+        </span>
+      </div>
+    </div>
+
+    <!-- Quick Stats Cards -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
+      <div class="p-4 rounded-xl bg-[var(--card)] border border-[var(--border)]">
+        <span class="text-xs text-[var(--muted-foreground)] block">Convocatorias Abiertas</span>
+        <span class="text-2xl font-bold text-[var(--foreground)]" id="stat-total">18</span>
+        <span class="text-[11px] text-blue-500 block mt-0.5">7 con consorcio regional</span>
+      </div>
+      <div class="p-4 rounded-xl bg-[var(--card)] border border-[var(--border)]">
+        <span class="text-xs text-[var(--muted-foreground)] block">Fondo Total Disponible</span>
+        <span class="text-2xl font-bold text-[var(--foreground)]">USD 42.8M</span>
+        <span class="text-[11px] text-[var(--muted-foreground)] block mt-0.5">Multilateral + Regional</span>
+      </div>
+      <div class="p-4 rounded-xl bg-[var(--card)] border border-[var(--border)]">
+        <span class="text-xs text-[var(--muted-foreground)] block">Universidades Elegibles</span>
+        <span class="text-2xl font-bold text-[var(--foreground)]">41</span>
+        <span class="text-11px text-emerald-500 block mt-0.5">6 países AUGM</span>
+      </div>
+      <div class="p-4 rounded-xl bg-[var(--card)] border border-[var(--border)]">
+        <span class="text-xs text-[var(--muted-foreground)] block">Próximos Cierres (&lt;20 d)</span>
+        <span class="text-2xl font-bold text-amber-500" id="stat-closing">4</span>
+        <span class="text-[11px] text-[var(--muted-foreground)] block mt-0.5">Requieren aval institucional</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+    <!-- Sidebar Filters -->
+    <aside class="lg:col-span-3 space-y-6">
+      <div class="p-5 rounded-2xl bg-[var(--card)] border border-[var(--border)] space-y-6">
+        <div class="flex items-center justify-between pb-3 border-b border-[var(--border)]">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-[var(--foreground)] flex items-center gap-2">
+            <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+            Filtros Avanzados
+          </h2>
+          <button onclick="resetFilters()" class="text-xs text-blue-500 hover:underline">Limpiar</button>
+        </div>
+
+        <!-- Scope / Origen -->
+        <div>
+          <label class="text-xs font-semibold text-[var(--muted-foreground)] block mb-2 uppercase tracking-wide">
+            Ámbito Territorial
+          </label>
+          <div class="space-y-1.5 text-xs">
+            <label class="flex items-center gap-2 cursor-pointer hover:text-blue-500">
+              <input type="checkbox" value="regional" class="filter-scope rounded border-[var(--border)] text-blue-600 focus:ring-0" checked onchange="applyFilters()">
+              <span>AUGM / Cono Sur / Mercosur</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer hover:text-blue-500">
+              <input type="checkbox" value="iberoamerica" class="filter-scope rounded border-[var(--border)] text-blue-600 focus:ring-0" checked onchange="applyFilters()">
+              <span>Iberoamérica (CYTED / OEI)</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer hover:text-blue-500">
+              <input type="checkbox" value="europe" class="filter-scope rounded border-[var(--border)] text-blue-600 focus:ring-0" checked onchange="applyFilters()">
+              <span>Unión Europea (Horizonte / Erasmus+)</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer hover:text-blue-500">
+              <input type="checkbox" value="global" class="filter-scope rounded border-[var(--border)] text-blue-600 focus:ring-0" checked onchange="applyFilters()">
+              <span>Global / Multilateral (BID, NIH, CAF)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Instrument Type -->
+        <div>
+          <label class="text-xs font-semibold text-[var(--muted-foreground)] block mb-2 uppercase tracking-wide">
+            Tipo de Instrumento
+          </label>
+          <select id="filter-type" onchange="applyFilters()" class="w-full text-xs p-2.5 rounded-lg border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-none focus:border-blue-500">
+            <option value="all">Todos los instrumentos</option>
+            <option value="consorcio">Consorcios I+D+i Multilaterales</option>
+            <option value="capacidades">Generación de Capacidades / Educación Superior</option>
+            <option value="movilidad">Redes Académicas y Movilidad AUGM</option>
+            <option value="equipamiento">Infraestructura y Equipamiento Científico</option>
+            <option value="becas">Posgrado y Pasantías Internacionales</option>
+          </select>
+        </div>
+
+        <!-- Discipline (OECD / Frascati) -->
+        <div>
+          <label class="text-xs font-semibold text-[var(--muted-foreground)] block mb-2 uppercase tracking-wide">
+            Disciplina (OCDE / Frascati)
+          </label>
+          <div class="space-y-1.5 text-xs max-h-40 overflow-y-auto pr-1">
+            <label class="flex items-center gap-2 cursor-pointer hover:text-blue-500">
+              <input type="checkbox" value="naturales" class="filter-discipline rounded border-[var(--border)]" checked onchange="applyFilters()">
+              <span>Ciencias Exactas y Naturales</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer hover:text-blue-500">
+              <input type="checkbox" value="ingenieria" class="filter-discipline rounded border-[var(--border)]" checked onchange="applyFilters()">
+              <span>Ingeniería y Tecnología</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer hover:text-blue-500">
+              <input type="checkbox" value="medicas" class="filter-discipline rounded border-[var(--border)]" checked onchange="applyFilters()">
+              <span>Ciencias Médicas y de la Salud</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer hover:text-blue-500">
+              <input type="checkbox" value="agricolas" class="filter-discipline rounded border-[var(--border)]" checked onchange="applyFilters()">
+              <span>Ciencias Agrícolas y Veterinarias</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer hover:text-blue-500">
+              <input type="checkbox" value="sociales" class="filter-discipline rounded border-[var(--border)]" checked onchange="applyFilters()">
+              <span>Ciencias Sociales</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer hover:text-blue-500">
+              <input type="checkbox" value="humanidades" class="filter-discipline rounded border-[var(--border)]" checked onchange="applyFilters()">
+              <span>Humanidades y Artes</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Special AUGM Requisite -->
+        <div class="pt-3 border-t border-[var(--border)]">
+          <label class="flex items-start gap-2.5 cursor-pointer">
+            <input type="checkbox" id="filter-consortium-only" onchange="applyFilters()" class="mt-0.5 rounded border-[var(--border)] text-blue-600 focus:ring-0">
+            <div>
+              <span class="text-xs font-semibold text-[var(--foreground)] block">Exclusivo Consorcios Tripartitos</span>
+              <span class="text-[11px] text-[var(--muted-foreground)] block">Requiere participación de al menos 2 países de la red</span>
+            </div>
+          </label>
+        </div>
+
+        <!-- Open Access & Data Policy Requirement -->
+        <div>
+          <label class="flex items-start gap-2.5 cursor-pointer">
+            <input type="checkbox" id="filter-open-access" onchange="applyFilters()" class="mt-0.5 rounded border-[var(--border)] text-blue-600 focus:ring-0">
+            <div>
+              <span class="text-xs font-semibold text-[var(--foreground)] block">Ciencia Abierta Obligatoria</span>
+              <span class="text-[11px] text-[var(--muted-foreground)] block">Exige depósito en repositorios institucionales</span>
+            </div>
+          </label>
+        </div>
+
+      </div>
+
+      <!-- Universities List Box -->
+      <div class="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] text-xs">
+        <h3 class="font-bold text-[var(--foreground)] mb-2 flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+          Universidades AUGM Representadas
+        </h3>
+        <p class="text-[11px] text-[var(--muted-foreground)] leading-relaxed">
+          UBA, UNLP, UNC, UNR, UNCUYO (Argentina) • UdelaR (Uruguay) • USP, UNICAMP, UFRGS, UFMG, UNESP (Brasil) • UChile, USACH, UV, UFRO (Chile) • UNA, UNE (Paraguay) • UMSS, UAGRM (Bolivia).
+        </p>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="lg:col-span-9 space-y-6">
+
+      <!-- Search & Mode Switcher Card -->
+      <div class="p-5 rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-sm space-y-4">
+        <div class="flex items-center justify-between">
+          <!-- Toggle modes -->
+          <div class="inline-flex p-1 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs font-medium">
+            <button id="btn-mode-keywords" onclick="switchSearchMode('keywords')" class="px-3.5 py-1.5 rounded-lg bg-[var(--card)] text-[var(--foreground)] shadow-xs font-semibold transition-all">
+              Búsqueda por Palabras Clave
+            </button>
+            <button id="btn-mode-matcher" onclick="switchSearchMode('matcher')" class="px-3.5 py-1.5 rounded-lg text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-all flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              Matchmaker por Abstract / Idea (IA)
+            </button>
+          </div>
+
+          <div class="text-xs text-[var(--muted-foreground)] hidden sm:block">
+            Mostrando <span id="count-results" class="font-bold text-[var(--foreground)]">6</span> de 6 convocatorias
+          </div>
+        </div>
+
+        <!-- Mode 1: Text Search Bar -->
+        <div id="search-bar-standard" class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--muted-foreground)]">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          </div>
+          <input type="text" id="query-input" oninput="applyFilters()" placeholder="Buscar por tema, agencia (CYTED, Horizonte, CAPES, ANID, BID) o palabras clave..." class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-sm focus:outline-none focus:border-blue-500 placeholder-[var(--placeholder)]">
+        </div>
+
+        <!-- Mode 2: Matchmaker Abstract Textarea (Hidden by default) -->
+        <div id="search-bar-matcher" class="hidden space-y-2">
+          <div class="flex items-center justify-between text-xs text-[var(--muted-foreground)]">
+            <span>Pega el título o resumen ejecutivo (abstract) de tu proyecto de investigación:</span>
+            <span class="text-purple-600 font-medium">Búsqueda semántica por afinidad temática</span>
+          </div>
+          <textarea id="abstract-input" rows="3" placeholder="Ej: 'Desarrollo de biocombustibles a partir de microalgas en cuencas hídricas del Río de la Plata y bioeconomía circular con colaboración regional...'" class="w-full p-3 rounded-xl border border-[var(--border)] bg-[var(--background)] text-xs focus:outline-none focus:border-purple-500"></textarea>
+          <div class="flex justify-end">
+            <button onclick="runAbstractMatch()" class="px-4 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              Calcular Compatibilidad con Fondos Activos
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Tag Chips -->
+        <div class="flex flex-wrap items-center gap-1.5 pt-1 text-xs">
+          <span class="text-[var(--muted-foreground)] mr-1">Frecuentes:</span>
+          <button onclick="quickFilter('Transición Energética')" class="px-2.5 py-1 rounded-full bg-[var(--background)] border border-[var(--border)] hover:border-blue-500 transition-colors">⚡ Transición Energética</button>
+          <button onclick="quickFilter('Salud Global')" class="px-2.5 py-1 rounded-full bg-[var(--background)] border border-[var(--border)] hover:border-blue-500 transition-colors">🧬 Salud Pública Regional</button>
+          <button onclick="quickFilter('Cambio Climático')" class="px-2.5 py-1 rounded-full bg-[var(--background)] border border-[var(--border)] hover:border-blue-500 transition-colors">🌿 Cuencas Hídricas</button>
+          <button onclick="quickFilter('Posgrado')" class="px-2.5 py-1 rounded-full bg-[var(--background)] border border-[var(--border)] hover:border-blue-500 transition-colors">🎓 Movilidad Posgrado</button>
+          <button onclick="quickFilter('Inteligencia Artificial')" class="px-2.5 py-1 rounded-full bg-[var(--background)] border border-[var(--border)] hover:border-blue-500 transition-colors">🤖 IA y Transformación Digital</button>
+        </div>
+      </div>
+
+      <!-- Sorting Bar -->
+      <div class="flex items-center justify-between text-xs px-2">
+        <div class="text-[var(--muted-foreground)]">
+          Criterio de ordenamiento:
+          <select id="sort-order" onchange="applyFilters()" class="bg-transparent font-semibold text-[var(--foreground)] border-none focus:ring-0 cursor-pointer">
+            <option value="deadline">Próximos a vencer</option>
+            <option value="amount">Mayor monto financiable</option>
+            <option value="recent">Más recientes</option>
+            <option value="match" id="opt-match" disabled>Mayor afinidad (Abstract)</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+          <span class="text-[var(--muted-foreground)] text-[11px]">Bases verificadas automáticamente</span>
+        </div>
+      </div>
+
+      <!-- Call Cards Grid -->
+      <div id="calls-container" class="space-y-4">
+        <!-- Rendered dynamically by JavaScript -->
+      </div>
+
+      <!-- Empty state container (hidden by default) -->
+      <div id="empty-state" class="hidden p-12 text-center rounded-2xl bg-[var(--card)] border border-[var(--border)]">
+        <svg class="w-12 h-12 mx-auto text-[var(--muted-foreground)] mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <h3 class="text-base font-bold text-[var(--foreground)]">No se encontraron convocatorias coincidentes</h3>
+        <p class="text-xs text-[var(--muted-foreground)] mt-1 max-w-sm mx-auto">
+          Prueba ampliando los filtros de ámbito territorial o eliminando términos específicos de búsqueda.
+        </p>
+        <button onclick="resetFilters()" class="mt-4 px-4 py-2 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700">
+          Restablecer todos los filtros
+        </button>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Modal Ficha Técnica Detallada -->
+  <div id="modal-detail" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="bg-[var(--card)] border border-[var(--border)] w-full max-w-3xl rounded-2xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
+      <!-- Modal Header -->
+      <div class="p-6 border-b border-[var(--border)] flex items-start justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2 mb-1.5">
+            <span id="modal-badge-scope" class="px-2 py-0.5 text-[10px] font-bold rounded uppercase"></span>
+            <span id="modal-funder" class="text-xs font-semibold text-[var(--muted-foreground)]"></span>
+          </div>
+          <h2 id="modal-title" class="text-lg md:text-xl font-bold text-[var(--foreground)]"></h2>
+        </div>
+        <button onclick="closeModal()" class="p-1 rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--background)] transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div class="p-6 space-y-6 overflow-y-auto text-xs">
+        
+        <!-- Quick stats summary row -->
+        <div class="grid grid-cols-3 gap-3 p-3.5 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+          <div>
+            <span class="text-[var(--muted-foreground)] block">Monto Máximo / Subvención</span>
+            <span id="modal-amount" class="text-sm font-bold text-[var(--foreground)]"></span>
+          </div>
+          <div>
+            <span class="text-[var(--muted-foreground)] block">Fecha Límite Cierre</span>
+            <span id="modal-deadline" class="text-sm font-bold text-amber-500"></span>
+          </div>
+          <div>
+            <span class="text-[var(--muted-foreground)] block">Cofinanciamiento Exigido</span>
+            <span id="modal-cofinancing" class="text-sm font-bold text-[var(--foreground)]"></span>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div>
+          <h3 class="font-bold text-[var(--foreground)] text-sm mb-1.5">Objetivo de la Convocatoria</h3>
+          <p id="modal-description" class="text-[var(--muted-foreground)] leading-relaxed"></p>
+        </div>
+
+        <!-- Eligibility and Consortium rules -->
+        <div class="p-4 rounded-xl border border-blue-500/20 bg-blue-500/5 space-y-2">
+          <h4 class="font-bold text-blue-500 text-xs flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+            Requisitos de Consorcio y Elegibilidad AUGM
+          </h4>
+          <p id="modal-consortium" class="text-[var(--foreground)] leading-relaxed"></p>
+        </div>
+
+        <!-- Eligible expenses -->
+        <div>
+          <h3 class="font-bold text-[var(--foreground)] text-sm mb-1.5">Gastos e Ítems Financiables</h3>
+          <ul id="modal-expenses" class="list-disc list-inside text-[var(--muted-foreground)] space-y-1"></ul>
+        </div>
+
+        <!-- Institutional Steps for AUGM researchers -->
+        <div class="p-3.5 rounded-xl border border-[var(--border)] bg-[var(--background)]">
+          <h4 class="font-bold text-[var(--foreground)] mb-1">Procedimiento de Aval Institucional</h4>
+          <p class="text-[var(--muted-foreground)]">
+            Toda postulación en representación de una universidad miembro requiere la firma de la Vicerrectoría de Investigación (o equivalente) y la Delegación Asesora de AUGM al menos <strong>5 días hábiles antes del cierre oficial</strong>.
+          </p>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 border-t border-[var(--border)] bg-[var(--background)] flex items-center justify-between">
+        <button onclick="downloadCallJSON()" class="px-3 py-1.5 rounded-lg border border-[var(--border)] text-xs text-[var(--foreground)] hover:bg-[var(--card)] transition-colors">
+          Descargar Metadatos JSON
+        </button>
+        <div class="flex items-center gap-2">
+          <button onclick="addToCalendar()" class="px-3.5 py-1.5 rounded-lg border border-[var(--border)] text-xs text-[var(--foreground)] hover:bg-[var(--card)] transition-colors flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            Agendar en Calendario
+          </button>
+          <a id="modal-link" href="#" target="_blank" class="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors">
+            Ir a Bases Oficiales
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none px-4 py-2.5 rounded-xl bg-slate-900 text-white text-xs shadow-xl flex items-center gap-2">
+    <span id="toast-message"></span>
+  </div>
+
+  <script>
+    // Database of Mock Calls tailored to AUGM & International/Regional Landscape
+    const callsData = [
+      {
+        id: "CYTED-2027-REDES",
+        title: "Redes Temáticas de Investigación e Innovación CYTED 2027",
+        funder: "Programa CYTED (Iberoamérica)",
+        scope: "iberoamerica",
+        scopeLabel: "Iberoamérica",
+        type: "consorcio",
+        typeLabel: "Redes I+D+i",
+        disciplines: ["naturales", "ingenieria", "sociales", "agricolas"],
+        disciplinesLabels: ["Ingeniería", "Agrícolas", "Ciencias Exactas"],
+        amount: "€ 32.000 / año (hasta 4 años)",
+        amountVal: 128000,
+        deadline: "2026-12-15",
+        deadlineDays: 28,
+        consortiumOnly: true,
+        openAccess: true,
+        description: "Financiamiento para la creación y consolidación de redes de grupos de I+D entre universidades de Iberoamérica. Cubre movilidad, talleres y estancias conjuntas.",
+        consortiumDetail: "Obligatorio: Mínimo 6 grupos de investigación de al menos 4 países iberoamericanos miembros. Universidades AUGM cuentan con preferencia en evaluación conjunta.",
+        expenses: ["Movilidad y viáticos para investigadores y doctorandos", "Organización de simposios y escuelas temáticas", "Publicaciones conjuntas y actividades de transferencia"],
+        cofinancing: "15% contraparte valorizada (horas investigador)",
+        link: "https://www.cyted.org"
+      },
+      {
+        id: "AUGM-ESCALA-DOC-2027",
+        title: "Programa Escala Docente y Grupos de Investigación AUGM",
+        funder: "Secretaría Ejecutiva AUGM",
+        scope: "regional",
+        scopeLabel: "Cono Sur / AUGM",
+        type: "movilidad",
+        typeLabel: "Movilidad & Redes",
+        disciplines: ["naturales", "ingenieria", "medicas", "sociales", "humanidades", "agricolas"],
+        disciplinesLabels: ["Multidisciplinar", "Educación Superior"],
+        amount: "Pasajes cubiertos + Estipendio diario completo",
+        amountVal: 18000,
+        deadline: "2026-11-30",
+        deadlineDays: 13,
+        consortiumOnly: true,
+        openAccess: true,
+        description: "Promueve la cooperación e integración académica entre las 41 universidades públicas de Argentina, Bolivia, Brasil, Chile, Paraguay y Uruguay en posgrados e investigación.",
+        consortiumDetail: "Exclusivo universidades miembro de la Asociación de Universidades Grupo Montevideo (AUGM). Acuerdos recíprocos de alojamiento y manutención.",
+        expenses: ["Pasajes aéreos/terrestres entre universidades AUGM", "Alojamiento universitario y alimentación en la institución receptora"],
+        cofinancing: "Cero costo monetario directo para el docente",
+        link: "https://grupomontevideo.org"
+      },
+      {
+        id: "HORIZON-CL6-BIO-2027",
+        title: "Horizon Europe: Alianzas Birregionales UE-CELAC para la Transición Agroecológica y Cambio Climático",
+        funder: "Comisión Europea (Horizon Europe Clúster 6)",
+        scope: "europe",
+        scopeLabel: "Unión Europea",
+        type: "consorcio",
+        typeLabel: "Gran Consorcio",
+        disciplines: ["agricolas", "naturales", "ingenieria"],
+        disciplinesLabels: ["Agroecología", "Clima", "Biotecnología"],
+        amount: "€ 4.500.000 (Consorcio)",
+        amountVal: 4800000,
+        deadline: "2027-02-18",
+        deadlineDays: 93,
+        consortiumOnly: true,
+        openAccess: true,
+        description: "Desarrollo de soluciones basadas en la naturaleza, monitoreo satelital y bioeconomía regional para la preservación de suelos y cuencas hídricas en América del Sur.",
+        consortiumDetail: "Mínimo 3 entidades de países miembros de la UE + mínimo 2 universidades/centros de investigación de países CELAC (América Latina).",
+        expenses: ["100% de costos directos elegibles + 25% de costos indirectos (overheads)", "Equipamiento científico de laboratorio", "Sueldos de investigadores y posdoctorandos", "Trabajo de campo en terreno"],
+        cofinancing: "0% (Subsidio directo no reembolsable)",
+        link: "https://ec.europa.eu/info/funding-tenders"
+      },
+      {
+        id: "ERASMUS-CBHE-2027",
+        title: "Erasmus+ Capacity Building in Higher Education (CBHE) - Cono Sur",
+        funder: "Agencia Ejecutiva Europea de Educación y Cultura (EACEA)",
+        scope: "europe",
+        scopeLabel: "Unión Europea",
+        type: "capacidades",
+        typeLabel: "Capacidades Educación",
+        disciplines: ["sociales", "ingenieria", "humanidades"],
+        disciplinesLabels: ["Educación Superior", "Gobernanza"],
+        amount: "€ 800.000 por consorcio",
+        amountVal: 860000,
+        deadline: "2027-01-25",
+        deadlineDays: 69,
+        consortiumOnly: true,
+        openAccess: true,
+        description: "Modernización de programas de posgrado conjunto, aseguramiento de la calidad y acreditación regional de carreras universitarias en la red AUGM.",
+        consortiumDetail: "Mínimo 2 universidades de la UE y mínimo 3 universidades de al menos 2 países de América Latina (ej. Argentina y Brasil, o Chile y Uruguay).",
+        expenses: ["Desarrollo curricular y plataformas digitales de enseñanza", "Capacitación pedagógica y estancias académicas", "Equipamiento tecnológico para aulas y laboratorios virtuales"],
+        cofinancing: "Costes unitarios cerrados según directrices EACEA",
+        link: "https://erasmus-plus.ec.europa.eu"
+      },
+      {
+        id: "BID-LAB-INNOVA-2026",
+        title: "Desafío de Innovación y Transferencia Tecnológica Universitaria BID Lab",
+        funder: "Banco Interamericano de Desarrollo (BID Lab)",
+        scope: "global",
+        scopeLabel: "Multilateral / BID",
+        type: "consorcio",
+        typeLabel: "Transferencia I+D",
+        disciplines: ["ingenieria", "medicas", "naturales"],
+        disciplinesLabels: ["Salud Digital", "Biotecnología", "Cleantech"],
+        amount: "USD 500.000 (Financiamiento no reembolsable)",
+        amountVal: 500000,
+        deadline: "2026-12-05",
+        deadlineDays: 18,
+        consortiumOnly: false,
+        openAccess: false,
+        description: "Acelerar la transferencia desde laboratorios universitarios hacia prototipos funcionales y spin-offs científico-tecnológicas con impacto social o ambiental.",
+        consortiumDetail: "Universidades públicas y privadas de países prestatarios del BID. Se priorizan alianzas con Oficinas de Transferencia y Licenciamiento (OTL).",
+        expenses: ["Validación y prototipado (TRL 4 a 7)", "Estudios de patentamiento y libertad de operación", "Pruebas de concepto y escalamiento piloto"],
+        cofinancing: "50% aporte de contraparte (30% especie, 20% pecuniario)",
+        link: "https://bidlab.org"
+      },
+      {
+        id: "WELLCOME-HEALTH-AUGM",
+        title: "Wellcome Trust: Investigación en Salud Global, Pandemias y Vigilancia Epidemiológica Regional",
+        funder: "Wellcome Trust (Reino Unido / Global)",
+        scope: "global",
+        scopeLabel: "Global / Wellcome",
+        type: "consorcio",
+        typeLabel: "I+D+i Salud",
+        disciplines: ["medicas", "naturales"],
+        disciplinesLabels: ["Epidemiología", "Virología", "Salud Pública"],
+        amount: "£ 1.200.000 (3 a 5 años)",
+        amountVal: 1500000,
+        deadline: "2027-03-30",
+        deadlineDays: 133,
+        consortiumOnly: false,
+        openAccess: true,
+        description: "Redes colaborativas para investigar enfermedades infecciosas emergentes, resistencia antimicrobiana e impacto del cambio climático en la salud del Cono Sur.",
+        consortiumDetail: "Investigador principal radicado en una institución académica de país de ingresos medios/bajos. Apoyo prioritario a redes interuniversitarias.",
+        expenses: ["Salarios de personal investigador, técnicos y fellows", "Reactivos, insumos de laboratorio y secuenciación genómica", "Acceso abierto dorado (APC fees) garantizado"],
+        cofinancing: "0% contraparte requerida",
+        link: "https://wellcome.org/grant-funding"
+      }
+    ];
+
+    let currentMode = "keywords";
+    let selectedCallForModal = null;
+
+    // Initialize display on load
+    document.addEventListener("DOMContentLoaded", () => {
+      applyFilters();
+    });
+
+    function switchSearchMode(mode) {
+      currentMode = mode;
+      const btnKw = document.getElementById("btn-mode-keywords");
+      const btnMat = document.getElementById("btn-mode-matcher");
+      const barStd = document.getElementById("search-bar-standard");
+      const barMat = document.getElementById("search-bar-matcher");
+      const optMatch = document.getElementById("opt-match");
+
+      if (mode === 'keywords') {
+        btnKw.classList.add("bg-[var(--card)]", "text-[var(--foreground)]", "font-semibold");
+        btnKw.classList.remove("text-[var(--muted-foreground)]");
+        btnMat.classList.remove("bg-[var(--card)]", "text-[var(--foreground)]", "font-semibold");
+        btnMat.classList.add("text-[var(--muted-foreground)]");
+        barStd.classList.remove("hidden");
+        barMat.classList.add("hidden");
+        optMatch.disabled = true;
+      } else {
+        btnMat.classList.add("bg-[var(--card)]", "text-[var(--foreground)]", "font-semibold");
+        btnMat.classList.remove("text-[var(--muted-foreground)]");
+        btnKw.classList.remove("bg-[var(--card)]", "text-[var(--foreground)]", "font-semibold");
+        btnKw.classList.add("text-[var(--muted-foreground)]");
+        barMat.classList.remove("hidden");
+        barStd.classList.add("hidden");
+        optMatch.disabled = false;
+        document.getElementById("sort-order").value = "match";
+      }
+      applyFilters();
+    }
+
+    function quickFilter(term) {
+      switchSearchMode('keywords');
+      const input = document.getElementById("query-input");
+      input.value = term;
+      applyFilters();
+    }
+
+    function resetFilters() {
+      document.getElementById("query-input").value = "";
+      document.getElementById("abstract-input").value = "";
+      document.getElementById("filter-type").value = "all";
+      document.getElementById("filter-consortium-only").checked = false;
+      document.getElementById("filter-open-access").checked = false;
+      document.querySelectorAll(".filter-scope").forEach(c => c.checked = true);
+      document.querySelectorAll(".filter-discipline").forEach(c => c.checked = true);
+      document.getElementById("sort-order").value = "deadline";
+      switchSearchMode('keywords');
+    }
+
+    function runAbstractMatch() {
+      const text = document.getElementById("abstract-input").value.trim().toLowerCase();
+      if (!text) {
+        showToast("Por favor ingresa texto o palabras del proyecto para calcular afinidad.");
+        return;
+      }
+      showToast("Calculando compatibilidad semántica con bases de financiamiento...");
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const query = document.getElementById("query-input").value.toLowerCase().trim();
+      const abstractQuery = document.getElementById("abstract-input").value.toLowerCase().trim();
+      const selectedType = document.getElementById("filter-type").value;
+      const consortiumOnly = document.getElementById("filter-consortium-only").checked;
+      const openAccessOnly = document.getElementById("filter-open-access").checked;
+      const sortOrder = document.getElementById("sort-order").value;
+
+      const activeScopes = Array.from(document.querySelectorAll(".filter-scope:checked")).map(el => el.value);
+      const activeDisciplines = Array.from(document.querySelectorAll(".filter-discipline:checked")).map(el => el.value);
+
+      let filtered = callsData.filter(item => {
+        // Scope
+        if (!activeScopes.includes(item.scope)) return false;
+
+        // Type
+        if (selectedType !== "all" && item.type !== selectedType) return false;
+
+        // Disciplines
+        const hasDiscipline = item.disciplines.some(d => activeDisciplines.includes(d));
+        if (!hasDiscipline) return false;
+
+        // Consortium rule
+        if (consortiumOnly && !item.consortiumOnly) return false;
+
+        // Open Access rule
+        if (openAccessOnly && !item.openAccess) return false;
+
+        // Text query
+        if (currentMode === 'keywords' && query) {
+          const matchTitle = item.title.toLowerCase().includes(query);
+          const matchFunder = item.funder.toLowerCase().includes(query);
+          const matchDesc = item.description.toLowerCase().includes(query);
+          const matchDisc = item.disciplinesLabels.some(l => l.toLowerCase().includes(query));
+          if (!matchTitle && !matchFunder && !matchDesc && !matchDisc) return false;
+        }
+
+        return true;
+      });
+
+      // Semantic Scoring Simulation for abstract mode
+      if (currentMode === 'matcher' && abstractQuery) {
+        filtered.forEach(call => {
+          let score = 55; // baseline
+          const words = abstractQuery.split(/\s+/).filter(w => w.length > 4);
+          words.forEach(word => {
+            if (call.title.toLowerCase().includes(word)) score += 15;
+            if (call.description.toLowerCase().includes(word)) score += 8;
+            call.disciplinesLabels.forEach(l => {
+              if (l.toLowerCase().includes(word)) score += 12;
+            });
+          });
+          call.matchScore = Math.min(score, 98);
+        });
+      } else {
+        filtered.forEach(call => delete call.matchScore);
+      }
+
+      // Sort
+      if (sortOrder === "deadline") {
+        filtered.sort((a, b) => a.deadlineDays - b.deadlineDays);
+      } else if (sortOrder === "amount") {
+        filtered.sort((a, b) => b.amountVal - a.amountVal);
+      } else if (sortOrder === "match") {
+        filtered.sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
+      }
+
+      renderCalls(filtered);
+    }
+
+    function renderCalls(calls) {
+      const container = document.getElementById("calls-container");
+      const emptyState = document.getElementById("empty-state");
+      const countEl = document.getElementById("count-results");
+
+      countEl.innerText = calls.length;
+
+      if (calls.length === 0) {
+        container.innerHTML = "";
+        emptyState.classList.remove("hidden");
+        return;
+      }
+
+      emptyState.classList.add("hidden");
+
+      let html = "";
+      calls.forEach(call => {
+        const isUrgent = call.deadlineDays <= 15;
+        const badgeColor = 
+          call.scope === 'regional' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300' :
+          call.scope === 'iberoamerica' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300' :
+          call.scope === 'europe' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300' :
+          'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300';
+
+        html += `
+          <div class="p-5 rounded-2xl bg-[var(--card)] border border-[var(--border)] hover:border-blue-500/50 transition-all duration-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-5">
+            <div class="space-y-2.5 max-w-2xl">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${badgeColor}">
+                  ${call.scopeLabel}
+                </span>
+                <span class="text-xs font-semibold text-[var(--muted-foreground)]">
+                  ${call.funder}
+                </span>
+                ${call.consortiumOnly ? `
+                  <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300 flex items-center gap-1">
+                    <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/></svg>
+                    Consorcio Multipaís AUGM
+                  </span>
+                ` : ''}
+                ${call.matchScore ? `
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500 text-white flex items-center gap-1">
+                    🎯 ${call.matchScore}% Compatibilidad
+                  </span>
+                ` : ''}
+              </div>
+
+              <h3 class="text-base font-bold text-[var(--foreground)] hover:text-blue-500 transition-colors cursor-pointer" onclick="openModal('${call.id}')">
+                ${call.title}
+              </h3>
+
+              <p class="text-xs text-[var(--muted-foreground)] line-clamp-2 leading-relaxed">
+                ${call.description}
+              </p>
+
+              <div class="flex flex-wrap items-center gap-2 pt-1">
+                ${call.disciplinesLabels.map(d => `
+                  <span class="px-2 py-0.5 rounded-md text-[10px] bg-[var(--background)] border border-[var(--border)] text-[var(--muted-foreground)]">
+                    ${d}
+                  </span>
+                `).join('')}
+                <span class="text-[11px] text-[var(--muted-foreground)] ml-2">
+                  💰 ${call.amount}
+                </span>
+              </div>
+            </div>
+
+            <!-- Right Column: Countdown and CTAs -->
+            <div class="flex md:flex-col items-center md:items-end justify-between md:justify-center border-t md:border-t-0 pt-3 md:pt-0 border-[var(--border)] gap-3 shrink-0">
+              <div class="text-left md:text-right">
+                <span class="text-[11px] text-[var(--muted-foreground)] block">Cierre de postulaciones</span>
+                <span class="text-xs font-bold ${isUrgent ? 'text-rose-500' : 'text-[var(--foreground)]'} flex items-center md:justify-end gap-1">
+                  ${isUrgent ? `
+                    <svg class="w-3.5 h-3.5 text-rose-500 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  ` : ''}
+                  ${call.deadline} (${call.deadlineDays} días)
+                </span>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button onclick="bookmarkCall('${call.id}')" title="Guardar en favoritos" class="p-2 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--background)] text-[var(--muted-foreground)] transition-colors">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+                </button>
+                <button onclick="openModal('${call.id}')" class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-colors shadow-xs">
+                  Ver Ficha y Requisitos
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function openModal(id) {
+      const call = callsData.find(c => c.id === id);
+      if (!call) return;
+      selectedCallForModal = call;
+
+      document.getElementById("modal-title").innerText = call.title;
+      document.getElementById("modal-funder").innerText = call.funder;
+      document.getElementById("modal-badge-scope").innerText = call.scopeLabel;
+      document.getElementById("modal-amount").innerText = call.amount;
+      document.getElementById("modal-deadline").innerText = `${call.deadline} (${call.deadlineDays} días restantes)`;
+      document.getElementById("modal-cofinancing").innerText = call.cofinancing;
+      document.getElementById("modal-description").innerText = call.description;
+      document.getElementById("modal-consortium").innerText = call.consortiumDetail;
+      document.getElementById("modal-link").href = call.link;
+
+      const expList = document.getElementById("modal-expenses");
+      expList.innerHTML = call.expenses.map(e => `<li>${e}</li>`).join('');
+
+      document.getElementById("modal-detail").classList.remove("hidden");
+    }
+
+    function closeModal() {
+      document.getElementById("modal-detail").classList.add("hidden");
+      selectedCallForModal = null;
+    }
+
+    function bookmarkCall(id) {
+      showToast("Convocatoria guardada en tu panel de seguimiento.");
+    }
+
+    function addToCalendar() {
+      if (!selectedCallForModal) return;
+      showToast(`Recordatorio de cierre (${selectedCallForModal.deadline}) añadido a tu calendario.`);
+    }
+
+    function downloadCallJSON() {
+      if (!selectedCallForModal) return;
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(selectedCallForModal, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `${selectedCallForModal.id}_augm_open_data.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast("Metadatos descargados en formato abierto JSON.");
+    }
+
+    function exportData(format) {
+      if (format === 'json') {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(callsData, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `convocatorias_cti_augm_${new Date().toISOString().slice(0,10)}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+        showToast("Dataset completo exportado en JSON (Compatible con CKAN).");
+      } else {
+        const headers = ["ID", "Título", "Entidad", "Ámbito", "Tipo", "Monto", "Cierre", "Días Restantes"];
+        const rows = callsData.map(c => [
+          `"${c.id}"`,
+          `"${c.title.replace(/"/g, '""')}"`,
+          `"${c.funder}"`,
+          `"${c.scopeLabel}"`,
+          `"${c.typeLabel}"`,
+          `"${c.amount}"`,
+          `"${c.deadline}"`,
+          c.deadlineDays
+        ]);
+        const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `convocatorias_cti_augm_${new Date().toISOString().slice(0,10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        showToast("Dataset consolidado exportado en formato tabular CSV.");
+      }
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById("toast");
+      document.getElementById("toast-message").innerText = msg;
+      toast.classList.remove("opacity-0", "translate-y-20");
+      setTimeout(() => {
+        toast.classList.add("opacity-0", "translate-y-20");
+      }, 3200);
+    }
+  </script>
+</body>
+</html>
